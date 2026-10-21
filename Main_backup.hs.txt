@@ -1,0 +1,628 @@
+import Prelude hiding ((!!))
+import Data.List (sortBy)
+import Data.Ord (comparing, Down(..))
+import Data.Char(toUpper)
+import System.Win32 (xBUTTON1)
+import GHC.Base (IO(IO))
+import Text.Read (readMaybe)
+import Distribution.Compat.CharParsing (lower)
+import GHC.Exts.Heap (GenClosure(value))
+
+--- 1. UZDEVUMS ---
+-- FUNKCIJAS DEKLARĒŠANA --
+
+-- Maybe Int atgriež skaitli ja veselu skaitļu saraksts nav tukšs
+findMaximum :: [Int] -> Maybe Int
+
+-- Atgriež Nothing ja skaitļu saraksts ir tukšs
+findMaximum [] = Nothing
+
+-- Ja saraksts nav tukšs tiek izveidots dilstoši sakārtots saraksts
+-- Tiek atgriezts saraksta pirmais elements
+findMaximum numbers = 
+    case sortBy (comparing Down) numbers of
+        (maximumNumber : _) -> Just maximumNumber
+        [] -> Nothing
+
+
+--- 2. UZDEVUMS ---
+-- FUNKCIJAS DEKLARĒŠANA --
+
+-- Funkcija saņem String un atgriež String
+reverseWord :: String -> String
+
+-- Funkcija [Char] saraksta elementu secības apgriešanai
+reverseWord input = reverse input
+
+
+-- 3. UZDEVUMS ---
+-- FUNKCIJU DEKLARĒŠANA --
+
+-- Funkcija viena vārda apstrādei
+-- Funkcija saņem String un atgriež String
+capitalizeWord :: String -> String
+
+-- Drošības pārbaude.
+--Pie tukšas ievades tiek atgriezta tukša virkne nevis kļūda
+capitalizeWord [] = []
+
+-- Pattern matching sadala burtu virkni uz pirmo burtu un pārējo
+-- toUpper firstChar padara pirmo burtu par lielo
+capitalizeWord (firstChar : rest) = toUpper firstChar : rest
+
+
+-- Funkcija visa teikuma apstrādei
+-- Funkcija saņem String un atgriež String
+capitalizeSentence :: String -> String
+
+-- words sentence -> sadala teikumu vārdu sarakstā
+-- map capitalizeWord -> padara katra vārda pirmo burtu par lielo
+-- unwords -> savieno vārdu sarakstu ievietojot starp tiem atstarpes
+capitalizeSentence sentence = 
+    unwords (map capitalizeWord (words sentence))
+
+
+--- 4. UZDEVUMS ---
+-- FUNKCIJAS DEKLARĒŠANA --
+
+-- a tipa mainīgais kas var atgriezt skaitli, simbolu vai vārdu
+secondLast :: [a] -> Maybe a
+
+-- Ja ir tukšs saraksts tad nav priekšpēdējā elementa
+secondLast [] = Nothing
+
+-- Ja sarakstā ir tikai viens elements tad nav priekšpēdējā elementa
+secondLast [_] = Nothing
+
+-- Ja sarakstā ir tieši divi elementi, tad pirmais no tiem ir meklētais
+secondLast [x, _] = Just x
+
+-- Rekursija. Ignorējam pirmo elementu un turpinam ar atlikušo sarakstu
+secondLast (_ : xs) = secondLast xs
+
+
+--- 5. UZDEVUMS ---
+-- FUNKCIJAS DEKLARĒŠANA --
+
+-- Operators !! atgriež elementa i-to elementu
+(!!) :: [a] -> Int -> a
+
+-- Ja meklējamā elementa indekss atrodas ārpus saraksta robežām
+[] !! _ = error "Index out of bounds"
+
+-- Kad sasniedzam šo nosacījumu, tad pašreizējais elements ir meklētais
+(x : _)  !! 0 = x
+
+-- Ignorē pirmo elementu un saglabā pārējo sarakstu kā xs
+(_ : xs) !! i
+    
+    -- Papildus pārbaude ja ir apstrādāts negatīvs indekss
+    | i < 0     = error "Index cannot be negative"
+    
+    -- Ja indekss nav nulle, samazinam indeksu par 1
+    | otherwise = xs !! (i - 1)
+
+
+--- 6. UZDEVUMS ---
+-- FUNKCIJAS DEKLARĒŠANA --
+
+-- Ievade ir viens saraksts.
+--Rezultāts -> saraksts, kura elementi paši ir saraksti
+-- gaps [1, 2, 3] -> [[2,3], [1,3], [1,2]]
+gaps :: [a] -> [[a]]
+
+-- Bāzes gadījums. Ja saraksts ir tukšs tad nav arī rezultāta
+gaps [] = []
+
+-- Rekursīvais gadījums
+-- (x : xs) sadala sarakstu. [1, 2, 3] -> x = 1; xs = [2, 3]
+-- gaps xs sadala sarakstu rekursīvi [2, 3] -> [[3], [2]]
+-- map (x :) pievieno atpakaļ katram 1: [[3], [2]] -> [[1, 3], [1, 2]]
+gaps (x : xs) = xs : map (x :) (gaps xs)
+
+
+--- 7. UZDEVUMS ---
+-- FUNKCIJU DEKLARĒŠANA --
+
+-- Definējam bināra koka datu tipu
+data Tree a = Branch a (Tree a) (Tree a) | Leaf
+    
+    -- Koka strukrtūras izvadīšanai uz ekrāna
+    deriving (Show)
+
+
+-- isSearchTree funkcijas definīcija. 
+-- Pārbauda vai koks atbilst binārā meklēšanas koka īpašībai
+
+-- ?????????????????????????????????????????????
+isSearchTree :: Ord a => Tree a -> Bool
+
+-- Saknes vērtībai nav ne apakšējās, ne augšējās robežas
+-- lower = Nothing; upper = Nothing
+isSearchTree tree = checkTree Nothing Nothing tree
+
+-- Pārbauda vai koks atbilst binārā koka meklēšanas koka noteikumiem
+-- izmantojot pieļaujamās apakšējās un augšējās robežas
+-- "Ord a" -> a tipa vērtībām jābūt salīdzināmām
+checkTree :: Ord a => Maybe a -> Maybe a -> Tree a -> Bool
+
+-- Sasniegts (Leaf) tukšs zars
+-- Tad tajā nav vērtību kas varētu pārkāpt BST, atgriežam True
+checkTree _ _ Leaf = True
+
+-- Ja pašreizējais elements ir Branch
+-- x     = pašreizējā mezgla vērtība
+-- left  = kreisais apakškoks
+-- right = labais apakškoks
+-- lower = minimālā atļautā robeža
+-- upper = maksimālā atļautā robeža
+checkTree lower upper (Branch x left right) = 
+        
+        -- Pārbaudam vai pašreizējā vērtība x ir virs apakšējās robežas
+        withinLowerBound &&
+        
+        -- Pārbaudam vai pašreizēā vērtība x nepārsniedz augšējo robežu
+        withinUpperBound &&
+
+        -- Rekursīvi pārbaudam kreiso apakškoku
+        -- Pašreizējā x vērtība kļūst par jauno augšējo robežu
+        -- Kreisajā apakškokā vērtībām jābūt <= x
+        checkTree lower (Just x) left &&
+
+        -- Rekursīvi pārbaudam labo apakškoku
+        -- Pašreizējā x vērtība kļūst par jauno apakšējo robežu
+        -- Labajā apakškokā vērtībām jābūt > x
+        checkTree (Just x) upper right
+    
+    -- Definējam lokālas palīgvērtības
+    where
+
+        -- Nosakam vai x atbilst pašreizējai apakšējai robežai
+        withinLowerBound = 
+            
+            -- Pārbaudam lower vērtību izmantojot pattern matching
+            case lower of
+
+                -- Apakšējās robežas nav. x automātiski iztur pārbaudi
+                Nothing -> True
+
+                -- Apakšējā robeža eksistē. x jābūt lielākam par šo robežu
+                Just low -> x > low
+
+        -- Nosakam vai x atbilst pašreizējai apakšējai robežai
+        withinUpperBound = 
+            
+            -- Pārbaudam upper vērtību izmantojot pattern matching
+            case upper of
+                
+                -- Apakšējās robežas nav. x automātiski iztur pārbaudi
+                Nothing -> True
+                
+                -- Augšējā robeža eksistē. x jābūt mazākam vai vienādam ar šo robežu
+                Just high -> x <= high
+
+
+-- Drīgas binārā meklēšanas koka piemērs
+validTree :: Tree Int
+validTree = 
+    Branch 8
+        (Branch 3
+            (Branch 1 Leaf Leaf)
+            (Branch 6 Leaf Leaf))
+        (Branch 10
+            Leaf
+            (Branch 14 Leaf Leaf))
+
+invalidTree :: Tree Int
+invalidTree = 
+    Branch 10
+        (Branch 5
+            Leaf
+            (Branch 12 Leaf Leaf))
+        (Branch 15 Leaf Leaf)
+
+
+-- Ievietojam jaunu vērtību binārājā meklēšanas kokā
+insertTree :: Ord a => a -> Tree a -> Tree a
+
+-- Ja koks ir tukšs
+-- Ievietojam jaunu zaru kas satur ievietoto vērtību
+insertTree e Leaf = Branch e Leaf Leaf
+
+-- Ja kokam jau ir zars
+-- Salīdzinam ievietojamo vērtību e ar pašreizējo vērtību x
+insertTree e (Branch x left right)
+
+    -- Mazākas vai vienādas vērtības tiek ievietotas kreisajā apakškokā
+    | e <= x = 
+        Branch x (insertTree e left) right
+
+    -- Lielākas vērtības tiek ievietotas labajā apakškokā
+    | e > x = 
+        Branch x left (insertTree e right)
+
+
+-- Pārbaudam īpašību ka vērtības ievietošana derīgā BST rada citu derīgu BST
+insertPreservesSearchTree :: Ord a => a -> Tree a -> Bool
+insertPreservesSearchTree value tree = 
+    not (isSearchTree tree) ||
+    isSearchTree (insertTree value tree)
+
+
+-- Kļūdaina insertTree versija testēšanai
+-- Lielākas vērtības kļūdaini tiek ievietotas kreisajā apakškokā
+insertTreeWrong :: Ord a => a -> Tree a -> Tree a
+insertTreeWrong e Leaf = Branch e Leaf Leaf
+
+-- Ja kokam jau ir zars
+-- Salīdzinam ievietojamo vērtību e ar pašreizējo vērtību x
+insertTreeWrong e (Branch x left right)
+    
+    -- Mazākas vai vienādas vērtības tiek ievietotas kreisajā apakškokā
+    | e <= x = 
+        Branch x (insertTreeWrong e left) right
+
+    -- Kļūda:
+    -- Lielāka vērtība tiek nepareizi ievietota kreisajā apakškokā
+    | e > x = 
+        Branch x (insertTreeWrong e left) right
+
+
+-- Pārbaudsam vai kļūdainā ievietošanas funkcija saglabā BST īpšību
+insertWrongPreservesSearchTree :: Ord a => a -> Tree a -> Bool
+insertWrongPreservesSearchTree value tree = 
+    not (isSearchTree tree) || 
+    isSearchTree (insertTreeWrong value tree)
+
+
+--- 8. UZDEVUMS ---
+-- FUNKCIJU DEKLARĒŠANA --
+
+-- Definējam funkciju, kas salīdzina likuma abas puses
+-- Eq b: tipa b vērtībām jāatbalsta vienādības salīdzināšana ar operatoru (==)
+-- (a -> b): funkcija, kas pārveido a tipa vērtību par b
+-- [[a]]: saraksts, kura elementi ir citi saraksti
+-- Bool: rezultāts būs True vai False
+checkMapConcatLaw :: Eq b => (a -> b) -> [[a]] -> Bool
+
+-- Funkcija saņem pārveidošanas funkciju f un sarakstu lists
+checkMapConcatLaw f lists =
+
+    -- Aprēķinām likuma kreiso pusi
+    -- concat apvieno visus iekšējos sarakstus vienā sarakstā
+    -- map f pielieto funkciju f katram iegūtā saraksta elementam
+    -- Operators (.) apzīmē funkciju kompozīciju:
+    -- vispirms izpilda labo funkciju, pēc tam kreiso
+    -- Operators (==) salīdzina abu izteiksmju rezultātus
+    (map f . concat) lists ==
+
+    -- Aprēķinām likuma labo pusi
+    -- map (map f): pielieto funkciju f katram elementam katrā iekšējā sarakstā
+    -- concat: apvieno pārveidotos sarakstus.
+    -- Ja abu pušu rezultāti sakrīt, tiek atgriezts True
+    -- Pretējā gadījumā tiek atgriezts False
+    (concat . map (map f)) lists
+
+
+
+
+
+
+
+
+
+
+
+
+task1 :: IO ()
+task1 = do
+    
+    -- 1. UZDEVUMS --
+    putStrLn "TASK 1: Find maximum number in a list [5, 10, 11, 15, 3, 8]"
+    -- Definējam sākotnējo sarakstu
+    let numbers = [5, 10, 11, 15, 3, 8]
+
+    -- Pārbaudam findMaximum rezultātu
+    case findMaximum numbers of
+        
+        -- Ja iegūstam maksimālo skaitli izvadam to
+        Just maximumNumber ->
+            putStrLn ("The maximum number is: " ++ show maximumNumber)
+
+        -- Ja saraksts ir tukšs izvadam paziņojumu
+        Nothing ->
+            putStrLn "The list is empty. Maximum number cannot be found"
+
+    
+    
+task2 :: IO ()
+task2 = do
+    
+    -- 2. UZDEVUMS --
+    putStrLn ("TASK 2: Create a function that reverses the characters " ++
+        "of the input word.")
+
+    -- Programma prasa lietotāja ievadi
+    putStrLn "Enter a word:"
+    
+    -- Nolasa lietotāja ievadi
+    input <- getLine
+
+    -- Ja nav ievades
+    if null input
+
+        -- Izvada paziņojumu ka teksta virkne nevar būt tukša
+        then putStrLn "Input cannot be empty."
+        
+        -- Izvada vārdu apgriestu otrādi
+        else putStrLn ("Reversed word: " ++ reverseWord input)
+
+
+task3 :: IO ()
+task3 = do
+
+    -- 3. UZDEVUMS --
+    putStrLn ("TASK 3: Create a function that converts the first letter of" ++
+        " each word in a sentence to an uppercase letter.")
+
+    -- Programma prasa lietotāja ievadi
+    putStrLn "Enter a sentence:"
+    
+    -- Nolasa lietotāja ievadi
+    input <- getLine
+
+    if null input
+        then putStrLn "Input cannot be empty"
+        else putStrLn ("Sentence with capitalized first letters: " 
+                            ++ capitalizeSentence input)
+
+
+task4 :: IO ()
+task4 = do
+
+    -- 4. UZDEVUMS --
+    putStrLn ("TASK 4: Create a function that returns the second-to-last " ++
+        "element from a list.")
+
+    -- Izveidojam skaitļu sarakstu
+    let numbers = [1, 2, 3, 4, 5]
+
+    -- Izvadam izveidoto skaitļu sarakstu
+    putStrLn ("List: " ++ show numbers)
+
+    -- Izvadam priekšpēdojo saraksta elementu
+    case secondLast numbers of
+        
+        -- Ja priekšpēdējais elements eksistē
+        Just value ->
+            putStrLn ("The second-to-last element is " ++ show value)
+
+        -- Ja priekšpēdējais elments neeksistē
+        Nothing ->
+            putStrLn "The list does not contain enough elements"
+
+
+task5 :: IO ()
+task5 = do
+
+    -- 5. UZDEVUMS --
+    putStrLn ("TASK 5: Define an operator (!!) that returns the i-th " ++
+        "element of a list.")
+
+    -- Izveidojam sarakstu
+    let languages = 
+            [ "Hasekell"
+            , "C++"
+            , "Python"
+            , "Java"
+            , "Scala"
+            , "Rust"
+            , "C#"
+            , "JavaScript"
+            ]
+
+    -- Izvadam izveidoto sarakstu
+    putStrLn ("Programming languages: " ++ show languages)
+
+    -- Programma prasa lietotāju ievadīt elementa indeksu
+    putStrLn "Enter the element index:"
+
+    -- Nolasa lietotāja ievadi
+    input <- getLine
+
+    -- Lietotāja ievades apstrāde
+    case readMaybe input :: Maybe Int of
+        
+        -- Ja tiek lietotājs ievada kaut ko kas nav vesels skaitlis izvada paziņojumu
+        Nothing ->
+            putStrLn "Invalid input. Please enter a number"
+
+        -- Ja tiek ievadīts skaitlis
+        Just index ->
+            
+            -- Ja tiek ievadīts indekss ārputs saraksta robežām
+            if index < 0 || index >= length languages
+                then putStrLn
+                ("Index out of bounds. Please enter number from 0 to "
+                ++ show (length languages -1))
+
+                -- Ja tiek ievadīts atbilstošs indekss
+                else putStrLn
+                ("Element at index " ++ show index ++ ": "
+                ++ (languages !! index))
+
+
+task6 :: IO ()
+task6 = do
+
+    -- 6. UZDEVUMS --
+    putStrLn ("TASK 6: Function that returns all possibilities for removing " ++
+        "one element from a list")
+
+    -- Izveidojam sarakstu
+    let numbers = [1, 2, 3, 4, 5]
+
+    -- Izvadam oriģinālo sarakstu
+    putStrLn ("Original list: " ++ show numbers)
+    putStrLn ("Possible lists after removing one element: ")
+
+    printGaps 1 (gaps numbers)
+
+-- Izvadam katru iespējamo sarakstu savā rindā
+-- Var būt dažāda tipa vērtības, tāpēc tiek izmantots Show a tipa ierobežojums
+printGaps :: Show a => Int -> [[a]] -> IO ()
+
+-- Bāzes gadījums. Ja saraksts ir tukšs tad nav arī rezultāta
+printGaps _ [] = return ()
+    
+-- Rekursīvais gadījums. Izvada katru sarakstu ar tā kārtas numuru
+printGaps n (x : xs) = do
+    putStrLn ("  " ++ show n ++ ". " ++ show x)
+    printGaps (n + 1) xs
+
+
+
+task7 :: IO ()
+task7 = do
+    
+    -- 7. UZDEVUMS --
+    putStrLn ("TASK 7: Create a function that inserts a value into a binary " ++
+        "search tree (BST) and checks if the resulting tree is still a BST.")
+
+    let value = 7
+    let newTree = insertTree value validTree
+
+    putStrLn "Original tree: "
+    print validTree
+
+    putStrLn ""
+    putStrLn ("Is the original tree a BST? "
+        ++ show (isSearchTree validTree))
+    
+    putStrLn ""
+    putStrLn ("Inserting value: " ++ show value)
+
+    putStrLn "Tree after insertion: "
+    print newTree
+
+    putStrLn ""
+    putStrLn ("Is the new tree a BST? "
+        ++ show (isSearchTree newTree))
+
+    putStrLn ""
+    putStrLn ("Does insertion preserve the BST property? "
+        ++ show (insertPreservesSearchTree value validTree))
+
+    
+    -- Incorrect implementation
+    let wrongTree = insertTreeWrong value validTree
+
+    putStrLn ""
+    putStrLn ("Inserting value " ++ show value
+        ++ " using the incorrect insertTreeWrong:")
+
+    putStrLn ""
+    print wrongTree
+
+    putStrLn ""
+    putStrLn ("Is the resulting tree a BST? "
+        ++ show (isSearchTree wrongTree))
+
+    putStrLn ""
+    putStrLn ("Does insertTreeWrong preserve the BST property? "
+        ++ show (insertWrongPreservesSearchTree value validTree))
+
+
+
+task8 :: IO ()
+task8 = do
+
+    -- 8. UZDEVUMS --
+    putStrLn ("TASK 8: Prove the map and concat law.")
+
+    -- Izveidojam sākotnējo sarakstu, kas satur trīs sarakstus
+    let numbers = [[1, 2], [3, 4], [5]]
+
+    -- Definējam funkciju f, kas katru skaitli reizina ar 2
+    let f = (*2)
+
+    -- Aprēķinām likuma kreiso pusi
+    -- 1. concat apvieno sarakstus: [1,2,3,4,5]
+    -- 2. map f reizina katru elementu ar 2
+    -- Sagaidāmais rezultāts: [2,4,6,8,10]
+    let leftResult = (map f . concat) numbers
+
+    -- Aprēķinām likuma labo pusi
+    -- 1. map (map f) izveido [[2,4],[6,8],[10]]
+    -- 2. concat apvieno pārveidotos sarakstus
+    -- Sagaidāmais rezultāts: [2,4,6,8,10]
+    let rightResult = (concat . map (map f)) numbers
+
+    -- Izvadām demonstrācijas nosaukumu
+    putStrLn "Task 8: Map and Concat Law"
+    putStrLn ""
+
+    -- Izvadām sākotnējo sarakstu
+    putStrLn ("Original lists: " ++ show numbers)
+
+    -- Izvadam pārveidošanas funkciju
+    putStrLn "Function: multiply by 2"
+    putStrLn ""
+
+    -- Izvadām likuma kreisās puses aprēķina rezultātu
+    putStrLn ("Left side result:  " ++ show leftResult)
+
+    -- Izvadām likuma labās puses aprēķina rezultātu
+    putStrLn ("Right side result: " ++ show rightResult)
+    putStrLn ""
+
+    -- Izsaucam checkMapConcatLaw ar funkciju f un numbers
+    -- Ja rezultāti sakrīt, terminālī parādās True
+    putStrLn ("Are both sides equal? "
+        ++ show (checkMapConcatLaw f numbers))
+    putStrLn ""
+
+    -- Izvadām papildu testu sadaļas nosaukumu
+    putStrLn "Additional Tests"
+
+    -- 1. tests:
+    -- Pārbaudām likumu ar veseliem skaitļiem
+    -- Sagaidāmais rezultāts: True
+    putStrLn ("Test 1 - Multiply by 2: "
+        ++ show (checkMapConcatLaw (*2) [[1,2],[3,4]]))
+
+    -- 2. tests:
+    -- Pārbaudām likumu, katram skaitlim pieskaitot 10
+    -- Papildus pārbaudām tukšu iekšējo sarakstu []
+    -- Sagaidāmais rezultāts: True
+    putStrLn ("Test 2 - Add 10: "
+        ++ show (checkMapConcatLaw (+10) [[1],[2,3],[]]))
+
+    -- 3. tests:
+    -- Pārbaudām likumu ar teksta virknēm
+    -- length aprēķina katras teksta virknes garumu
+    -- "Hi" tiek pārveidots par 2
+    -- Sagaidāmais rezultāts: True
+    putStrLn ("Test 3 - String lengths: "
+        ++ show (checkMapConcatLaw length
+            [["Hi","Hello"],["Haskell"]]))
+
+    -- 4. tests:
+    -- Pārbaudām likumu ar loģiskajām vērtībām
+    -- not maina True uz False un False uz True
+    -- Sagaidāmais rezultāts: True
+    putStrLn ("Test 4 - Boolean negation: "
+        ++ show (checkMapConcatLaw not
+            [[True,False],[False]]))
+
+    -- 5. tests:
+    -- Pārbaudām likumu ar tukšu ārējo sarakstu
+    -- ([] :: [[Int]]): tukšs saraksts, kura elementi būtu Int tipa saraksti
+    -- Abas likuma puses atgriež tukšu sarakstu
+    -- Sagaidāmais rezultāts: True
+    putStrLn ("Test 5 - Empty list: "
+        ++ show (checkMapConcatLaw (+1) ([] :: [[Int]])))
+
+
+main :: IO ()
+main = task1

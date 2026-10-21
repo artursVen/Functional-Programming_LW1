@@ -1,0 +1,20 @@
+1.  Ikdienas darbā laboratorijas uzdevumiem visērtāk būs izmantot GHCi. 
+    Atver VS Code termināli attiecīgajā laboratorijas mapē un palaid:
+    ghci main.hs
+
+2.  Pēc koda izmaiņām nav katru reizi jāiziet no GHCi. 
+    Saglabā failu ar Ctrl+S un GHCi ievadi:
+    :r
+
+3.  Noderēs lai noskaidrotu funkcijas tipu 
+    :t funkcija
+    piemēram
+    ghci> :t putStrLn
+    putStrLn :: String -> IO ()
+
+4.  Lai izietu no GHCi
+    :q
+
+5.  Ja laboratorijas darbā nepieciešams pārbaudīt, vai programma reāli kompilējas
+    ghc Main.hs -o Main.exe
+    .\Main.exe
